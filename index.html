@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Anonymous — Send to Telegram (safe)</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial;font-size:16px}
+    body{max-width:760px;margin:40px auto;padding:0 16px;color:#111}
+    header{display:flex;justify-content:space-between;align-items:center}
+    textarea{width:100%;min-height:140px;padding:12px;border-radius:8px;border:1px solid #ddd;resize:vertical}
+    button{padding:10px 16px;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
+    .muted{color:#666;font-size:0.9rem}
+    form > * + *{margin-top:12px}
+    .small{font-size:0.85rem;color:#666}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Anonymous message</h1>
+    <small class="muted">Secure — token kept on server</small>
+  </header>
+
+  <p class="small">Your message will be forwarded to the Telegram chat configured on the server. No tokens or IDs are stored in this page.</p>
+
+  <form id="form">
+    <label for="msg">Message (max 1000 chars)</label>
+    <textarea id="msg" maxlength="1000" placeholder="Write your anonymous message..." required></textarea>
+
+    <div>
+      <label class="small"><input id="agree" type="checkbox" /> I confirm this message is not abusive or illegal</label>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="send">Send anonymously</button>
+      <div id="status" class="small" aria-live="polite"></div>
+    </div>
+  </form>
+
+  <script>
+    const status = document.getElementById('status');
+    const form = document.getElementById('form');
+
+    function setStatus(t, isError = false) {
+      status.textContent = t;
+      status.style.color = isError ? 'crimson' : '#333';
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const msgEl = document.getElementById('msg');
+      const agree = document.getElementById('agree').checked;
+      const message = msgEl.value.trim();
+      if (!message) return alert('Type a message first.');
+      if (!agree) return alert('Please confirm the checkbox.');
+      if (message.length > 1000) return alert('Message too long.');
+
+      setStatus('Sending...');
+      document.getElementById('send').disabled = true;
+
+      try {
+        const res = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          setStatus('Sent ✅');
+          msgEl.value = '';
+        } else {
+          setStatus('Error: ' + (data.error || 'unknown'), true);
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus('Network or server error', true);
+      } finally {
+        document.getElementById('send').disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
